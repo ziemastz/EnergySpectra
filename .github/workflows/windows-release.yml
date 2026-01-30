@@ -1,0 +1,116 @@
+name: windows-release
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+env:
+  QT_VERSION: "6.10.1"
+
+jobs:
+  build:
+    runs-on: windows-2022
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2019_64
+          modules: qtcharts
+
+      - name: Configure (Release)
+        shell: cmd
+        run: |
+          call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          if not exist build mkdir build
+          cd build
+          qmake ..\EnergySpectra.pro -config release "DESTDIR=release"
+
+      - name: Build
+        shell: cmd
+        run: |
+          call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          cd build
+          nmake
+
+      - name: Bundle runtime
+        shell: cmd
+        run: |
+          call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          cd build
+          if not exist dist mkdir dist
+          copy release\EnergySpectra.exe dist\
+          windeployqt --release --dir dist dist\EnergySpectra.exe
+
+      - name: Create archive
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "build/dist/*" -DestinationPath "EnergySpectra-win64.zip"
+
+      - name: Set release tag
+        shell: pwsh
+        run: |
+          $tag = Get-Date -Format "yy.M.d"
+          "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
+
+      - name: Remove existing release/tag for this date
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "$env:RELEASE_TAG"
+          $repo = "$env:GITHUB_REPOSITORY"
+          $headers = @{
+            Authorization = "Bearer $env:GITHUB_TOKEN"
+            "X-GitHub-Api-Version" = "2022-11-28"
+            "User-Agent" = "gh-actions-cleanup"
+          }
+
+          # Delete release if it exists
+          $releaseUrl = "https://api.github.com/repos/$repo/releases/tags/$tag"
+          try {
+            $rel = Invoke-RestMethod -Headers $headers -Uri $releaseUrl -Method Get
+            if ($rel.id) {
+              Write-Host "Deleting existing release $tag (id $($rel.id))"
+              Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$repo/releases/$($rel.id)" -Method Delete
+            }
+          } catch {
+            if ($_.Exception.Response.StatusCode.value__ -ne 404) { throw }
+            Write-Host "No existing release for tag $tag"
+          }
+
+          # Delete tag ref if it exists
+          $tagRefUrl = "https://api.github.com/repos/$repo/git/refs/tags/$tag"
+          try {
+            Invoke-RestMethod -Headers $headers -Uri $tagRefUrl -Method Delete
+            Write-Host "Deleted existing tag refs/tags/$tag"
+          } catch {
+            $status = $_.Exception.Response.StatusCode.value__
+            if ($status -ne 404 -and $status -ne 422) { throw }
+            Write-Host "No existing tag refs/tags/$tag"
+          }
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EnergySpectra-win64
+          path: EnergySpectra-win64.zip
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Release ${{ env.RELEASE_TAG }}
+          files: EnergySpectra-win64.zip
