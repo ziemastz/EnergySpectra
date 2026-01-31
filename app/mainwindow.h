@@ -30,6 +30,8 @@ private slots:
     void onSeriesVisibilityChanged(int row, int column);
 
     void on_remove_pushButton_clicked();
+    void onExportDataClicked();
+    void onExportImageClicked();
 
 private:
     Ui::MainWindow *ui;

@@ -135,6 +135,40 @@
       </property>
      </widget>
     </item>
+    <item row="4" column="0" colspan="3">
+     <layout class="QHBoxLayout" name="exportLayout">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <item>
+       <widget class="QPushButton" name="exportDataButton">
+        <property name="text">
+         <string>Export Data (TXT)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="exportImageButton">
+        <property name="text">
+         <string>Export Chart (PNG)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="exportSpacer">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
    </layout>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>

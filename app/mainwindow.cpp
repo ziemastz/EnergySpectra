@@ -11,6 +11,11 @@
 #include <QMetaType>
 #include <QVBoxLayout>
 #include <QTableWidgetItem>
+#include <QtCharts/QAbstractSeries>
+#include <QDateTime>
+#include <QFile>
+#include <QTextStream>
+#include <QPixmap>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -33,6 +38,9 @@ MainWindow::MainWindow(QWidget *parent)
     auto* layout = new QVBoxLayout(ui->chart_widget);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(m_chartWidget);
+
+    connect(ui->exportDataButton, &QPushButton::clicked, this, &MainWindow::onExportDataClicked);
+    connect(ui->exportImageButton, &QPushButton::clicked, this, &MainWindow::onExportImageClicked);
 }
 
 MainWindow::~MainWindow()
@@ -203,5 +211,67 @@ void MainWindow::on_remove_pushButton_clicked()
     
     // Odśwież rozmiar kolumn
     ui->files_tableWidget->resizeColumnsToContents();
+}
+
+void MainWindow::onExportDataClicked()
+{
+    const QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+    const QString defaultName = QString("spectrum_%1.txt").arg(timestamp);
+
+    const QString path = QFileDialog::getSaveFileName(
+        this,
+        tr("Save series data"),
+        defaultName,
+        tr("Text files (*.txt);;All files (*.*)"));
+
+    if (path.isEmpty()) {
+        return;
+    }
+
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, tr("Save error"), tr("Cannot open file for writing."));
+        return;
+    }
+
+    QTextStream out(&file);
+    out.setLocale(QLocale::c());
+    out << "Series\tX\tY\n";
+
+    const auto seriesList = m_chartWidget->chart()->series();
+    for (QAbstractSeries* base : seriesList) {
+        auto* series = qobject_cast<QLineSeries*>(base);
+        if (!series) continue;
+        for (const auto& p : series->points()) {
+            out << series->name() << '\t' << p.x() << '\t' << p.y() << '\n';
+        }
+    }
+
+    file.close();
+    QMessageBox::information(this, tr("Export complete"), tr("Data saved to %1").arg(path));
+}
+
+void MainWindow::onExportImageClicked()
+{
+    const QString timestamp = QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss");
+    const QString defaultName = QString("chart_%1.png").arg(timestamp);
+
+    const QString path = QFileDialog::getSaveFileName(
+        this,
+        tr("Save chart image"),
+        defaultName,
+        tr("PNG Image (*.png);;JPEG Image (*.jpg *.jpeg);;All files (*.*)"));
+
+    if (path.isEmpty()) {
+        return;
+    }
+
+    const QPixmap pix = m_chartWidget->view()->grab();
+    if (!pix.save(path)) {
+        QMessageBox::warning(this, tr("Save error"), tr("Failed to save image."));
+        return;
+    }
+
+    QMessageBox::information(this, tr("Export complete"), tr("Chart saved to %1").arg(path));
 }
 
