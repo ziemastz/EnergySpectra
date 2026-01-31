@@ -132,7 +132,7 @@ void SpectrumChartWidget::recalcAxisRanges()
         auto* line = qobject_cast<QLineSeries*>(series);
         if (!line) continue;
 
-        const auto pts = line->pointsVector();
+        const auto pts = line->points();
         for (const auto& p : pts) {
             minX = qMin(minX, p.x());
             maxX = qMax(maxX, p.x());

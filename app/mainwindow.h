@@ -27,8 +27,6 @@ private slots:
     void on_add_pushButton_clicked();
     void onSpectrumReady(const SpectrumResult& result);
     void onSpectrumError(const QString& path, const QString& message);
-    void onSeriesVisibilityChanged(int row, int column);
-
     void on_remove_pushButton_clicked();
     void onExportDataClicked();
     void onExportImageClicked();

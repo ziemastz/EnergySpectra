@@ -47,6 +47,10 @@ MainWindow::~MainWindow()
 {
     if (m_serviceThread) {
         m_serviceThread->quit();
+        if (m_service) {
+            m_service->deleteLater();
+            m_service = nullptr;
+        }
         m_serviceThread->wait();
     }
     delete ui;
@@ -153,22 +157,6 @@ void MainWindow::onSpectrumError(const QString& path, const QString& message)
     QMessageBox::warning(this, "Błąd", path + "\n" + message);
 }
 
-void MainWindow::onSeriesVisibilityChanged(int row, int column)
-{
-    Q_UNUSED(column);
-    if (!m_seriesByRow.contains(row)) {
-        return;
-    }
-
-    auto* cb = qobject_cast<QCheckBox*>(ui->files_tableWidget->cellWidget(row, 0));
-    if (!cb) return;
-
-    QLineSeries* series = m_seriesByRow[row];
-    series->setVisible(cb->isChecked());
-}
-
-
-
 void MainWindow::on_remove_pushButton_clicked()
 {
     // Pobierz wybrany wiersz z tabeli
@@ -242,7 +230,8 @@ void MainWindow::onExportDataClicked()
     for (QAbstractSeries* base : seriesList) {
         auto* series = qobject_cast<QLineSeries*>(base);
         if (!series) continue;
-        for (const auto& p : series->points()) {
+        const auto points = series->pointsVector(); // avoids copying via QList detachment
+        for (const auto& p : points) {
             out << series->name() << '\t' << p.x() << '\t' << p.y() << '\n';
         }
     }

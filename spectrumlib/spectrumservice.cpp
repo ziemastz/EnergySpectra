@@ -23,15 +23,18 @@ static EnergyLineResult parseEnergyLine(const QString& line)
     // Rozbij po dowolnej liczbie białych znaków (spacja, tab)
     const QStringList tokens = trimmed.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
 
-    // Minimum: 2 kolumny (event id + energia)
-    if (tokens.size() < 2) return result;
+    if (tokens.isEmpty()) return result;
 
-    // tokens[0] = numer eventu
-    bool ok = false;
-    result.eventId = tokens[0].toInt(&ok);
-    if (!ok) result.eventId = -1;
+    bool okId = false;
+    int startIdx = 1;
+    result.eventId = tokens[0].toInt(&okId);
+    if (!okId) {
+        // Brak poprawnego eventId – traktuj pierwszą kolumnę jako energię
+        result.eventId = -1;
+        startIdx = 0;
+    }
 
-    for (int i = 1; i < tokens.size(); ++i) {
+    for (int i = startIdx; i < tokens.size(); ++i) {
         bool ok = false;
         double e = tokens[i].toDouble(&ok);
         if (ok) {
@@ -86,12 +89,11 @@ void SpectrumService::LoadSpectrum(const QString &filePath, double binWidth, con
 
     // Min/Max
     double minE = energies[0], maxE = energies[0];
-    double sum = 0, sum2 = 0;
+    double sum = 0;
     for (double e : energies) {
         minE = qMin(minE, e);
         maxE = qMax(maxE, e);
         sum += e;
-        sum2 += e * e;
     }
 
     const double n = energies.size();
@@ -109,15 +111,15 @@ void SpectrumService::LoadSpectrum(const QString &filePath, double binWidth, con
         bins[idx]++;
     }
 
-    // Wybierz dzielnik: gdy brak ID, normalizuj po liczbie wpisów
-    const int eventCount = uniqueEvents.isEmpty() ? energies.size() : uniqueEvents.size();
+    // Normalizacja po całkowitej liczbie energii (sumuje się do 1 niezależnie od liczby hitów na event)
+    const int normalizationBase = energies.size();
 
     // Zbuduj punkty do wykresu (normalizacja po liczbie eventów)
     QVector<QPointF> points;
     points.reserve(binCount);
     for (int i = 0; i < binCount; ++i) {
         const double x = minE + (i + 0.5) * binWidth;
-        const double normalized = static_cast<double>(bins[i]) / static_cast<double>(eventCount);
+        const double normalized = static_cast<double>(bins[i]) / static_cast<double>(normalizationBase);
         points.append(QPointF(x, normalized));
     }
 
@@ -125,6 +127,7 @@ void SpectrumService::LoadSpectrum(const QString &filePath, double binWidth, con
     result.sourcePath = filePath;
     result.label = label;
     result.points = std::move(points);
+    const int eventCount = uniqueEvents.isEmpty() ? static_cast<int>(n) : static_cast<int>(uniqueEvents.size());
     result.stats = SpectrumStats{ n, mean, minE, maxE, eventCount, zeroCount };
 
     emit spectrumReady(std::move(result));
