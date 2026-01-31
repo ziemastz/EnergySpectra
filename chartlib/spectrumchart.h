@@ -18,6 +18,7 @@ public:
     QLineSeries* addSeries(const QString& name, const QVector<QPointF>& points);
     void removeSeries(QLineSeries* series);
     void clear();
+    void centerOnSeries(QLineSeries* series);
 
     QChart* chart() const { return m_chart; }
     ZoomableChartView* view() const { return m_chartView; }

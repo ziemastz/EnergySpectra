@@ -30,6 +30,7 @@ private slots:
     void on_remove_pushButton_clicked();
     void onExportDataClicked();
     void onExportImageClicked();
+    void onTableCellDoubleClicked(int row, int column);
 
 private:
     Ui::MainWindow *ui;

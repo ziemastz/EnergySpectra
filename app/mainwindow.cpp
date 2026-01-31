@@ -41,6 +41,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->exportDataButton, &QPushButton::clicked, this, &MainWindow::onExportDataClicked);
     connect(ui->exportImageButton, &QPushButton::clicked, this, &MainWindow::onExportImageClicked);
+    connect(ui->files_tableWidget, &QTableWidget::cellDoubleClicked,
+            this, &MainWindow::onTableCellDoubleClicked);
 }
 
 MainWindow::~MainWindow()
@@ -155,6 +157,14 @@ void MainWindow::onSpectrumError(const QString& path, const QString& message)
     if (ui->statusbar) ui->statusbar->clearMessage();
 
     QMessageBox::warning(this, "Błąd", path + "\n" + message);
+}
+
+void MainWindow::onTableCellDoubleClicked(int row, int /*column*/)
+{
+    QLineSeries* series = m_seriesByRow.value(row, nullptr);
+    if (series) {
+        m_chartWidget->centerOnSeries(series);
+    }
 }
 
 void MainWindow::on_remove_pushButton_clicked()

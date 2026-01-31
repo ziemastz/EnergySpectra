@@ -92,7 +92,7 @@ void SpectrumChartWidget::ensureAxisRange(const QVector<QPointF>& points)
 
     if (!m_hasData) {
         const double paddingX = qFuzzyIsNull(maxX - minX) ? 1.0 : (maxX - minX) * 0.1;
-        const double paddedMinX = minX - paddingX;
+        const double paddedMinX = qMax(0.0, minX - paddingX);
         const double paddedMaxX = maxX + paddingX;
         const double paddingY = qFuzzyIsNull(maxY) ? 0.1 : maxY * 0.1;
         const double paddedMaxY = maxY + paddingY;
@@ -103,14 +103,14 @@ void SpectrumChartWidget::ensureAxisRange(const QVector<QPointF>& points)
         return;
     }
 
-    const double newMinX = qMin(m_axisX->min(), minX);
+    const double newMinX = qMax(0.0, qMin(m_axisX->min(), minX));
     const double newMaxX = qMax(m_axisX->max(), maxX);
     const double paddingX = qFuzzyIsNull(newMaxX - newMinX) ? 1.0 : (newMaxX - newMinX) * 0.1;
-    m_axisX->setRange(newMinX - paddingX, newMaxX + paddingX);
+    m_axisX->setRange(qMax(0.0, newMinX - paddingX), newMaxX + paddingX);
 
     const double newMaxY = qMax(m_axisY->max(), maxY);
     const double paddingY = qFuzzyIsNull(newMaxY) ? 0.1 : newMaxY * 0.1;
-    m_axisY->setRange(qMin(m_axisY->min(), minY), newMaxY + paddingY);
+    m_axisY->setRange(qMax(0.0, qMin(m_axisY->min(), minY)), newMaxY + paddingY);
 }
 
 void SpectrumChartWidget::recalcAxisRanges()
@@ -146,6 +146,32 @@ void SpectrumChartWidget::recalcAxisRanges()
         m_axisY->setRange(0.0, 1.0);
         m_hasData = false;
         return;
+    }
+
+    const double paddingX = qFuzzyIsNull(maxX - minX) ? 1.0 : (maxX - minX) * 0.1;
+    const double paddingY = qFuzzyIsNull(maxY) ? 0.1 : maxY * 0.1;
+
+    m_axisX->setRange(qMax(0.0, minX - paddingX), maxX + paddingX);
+    m_axisY->setRange(qMax(0.0, minY), maxY + paddingY);
+    m_hasData = true;
+}
+
+void SpectrumChartWidget::centerOnSeries(QLineSeries* series)
+{
+    if (!series) return;
+    const auto pts = series->points();
+    if (pts.isEmpty()) return;
+
+    double minX = pts.first().x();
+    double maxX = pts.first().x();
+    double minY = pts.first().y();
+    double maxY = pts.first().y();
+
+    for (const auto& p : pts) {
+        minX = qMin(minX, p.x());
+        maxX = qMax(maxX, p.x());
+        minY = qMin(minY, p.y());
+        maxY = qMax(maxY, p.y());
     }
 
     const double paddingX = qFuzzyIsNull(maxX - minX) ? 1.0 : (maxX - minX) * 0.1;
