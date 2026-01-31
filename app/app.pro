@@ -21,6 +21,12 @@ INCLUDEPATH += ../chartlib ../spectrumlib ..
 LIBS += -L$$OUT_PWD/../chartlib -lChartLib \
         -L$$OUT_PWD/../spectrumlib -lSpectrumLib
 
+# resources
+RESOURCES += resources.qrc
+
+# exe icon (Windows)
+win32:RC_ICONS += resources/app.ico
+
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
