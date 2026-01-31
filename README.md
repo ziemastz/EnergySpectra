@@ -1,23 +1,25 @@
 # EnergySpectra
 
-Prosta aplikacja desktopowa Qt (Qt Charts) do wczytywania plików z energiami, budowania i podglądu widm (histogramów znormalizowanych), oraz zarządzania wieloma seriami na jednym wykresie.
+Prosta aplikacja desktopowa Qt (Qt Charts) do wczytywania plików z energiami, budowania i podglądu widm (histogramów znormalizowanych), oraz zarządzania wieloma seriami na jednym wykresie. Wydzielone biblioteki pozwalają ponownie używać wykresu i serwisu w innych aplikacjach.
 
 ## Funkcje
 - Wczytywanie wielu plików tekstowych (`*.tab`, `*.dat`, `*.txt`) i nakładanie ich na jeden wykres.
 - Parsowanie danych: pierwsza kolumna = `eventId` (opcjonalnie), kolejne kolumny = energie; linie zaczynające się od `#` są ignorowane.
-- Histogram z konfigurowalną szerokością koszyka (w kodzie `binWidth`, domyślnie 0.1; łatwo podpiąć pod kontrolkę UI).
-- Normalizacja: jeżeli w pliku występują identyfikatory zdarzeń, wartości Y są dzielone przez liczbę unikalnych zdarzeń; gdy brak ID – dzielnik to liczba wpisów. Dzięki temu tabela i wykres są spójne.
+- Histogram z konfigurowalną szerokością koszyka (`binWidth`, domyślnie 0.1; łatwo podpiąć pod kontrolkę UI).
+- Normalizacja: gdy są identyfikatory zdarzeń – dzielnik to liczba unikalnych zdarzeń; gdy brak ID – dzielnik to liczba wpisów.
 - Statystyki per plik: liczba zdarzeń, liczba wpisów (entries), min/max/mean energii, liczba zer (energies == 0).
 - Tabela plików z checkboxem widoczności serii, możliwością usuwania wierszy (numeracja aktualizowana).
-- Interaktywność wykresu: zoom kółkiem (również selektywnie po osi, gdy kursor przy osi), przesuwanie wykresu myszą (lewy/środkowy przycisk).
-- Obsługa błędów w UI (status bar + message box) bez blokowania aplikacji – obliczenia w osobnym wątku (`SpectrumService`).
+- Interaktywność wykresu: zoom kółkiem (także selektywnie po osi), przesuwanie myszą.
+- Eksport:
+  - `Export Data (TXT)` – zapis wszystkich serii do TSV (nagłówki: Series, X, Y) kompatybilnego z Excel; nazwa z timestampem.
+  - `Export Chart (PNG)` – zapis bieżącego widoku wykresu do obrazu (PNG/JPEG), również z nazwą opartą o timestamp.
+- Obliczenia w osobnym wątku (`SpectrumService`) – UI nie blokuje się przy dużych plikach.
 
-## Struktura plików
-- `mainwindow.cpp/h/ui` – logika UI, tabela, wykres, obsługa sygnałów serwisu.
-- `zoomablechartview.cpp/h` – rozszerzony `QChartView` z pan/zoom.
-- `spectrumservice.cpp/h` – wątek serwisowy: parsowanie pliku, histogram, statystyki.
-- `SpectrumDtos.h` – struktury DTO (`SpectrumResult`, `SpectrumStats`).
-- `EnergySpectra.pro` – projekt qmake.
+## Struktura katalogów
+- `chartlib/` – biblioteka statyczna z komponentem `SpectrumChartWidget` i `ZoomableChartView`.
+- `spectrumlib/` – biblioteka statyczna z serwisem (`SpectrumService`) i DTO (`SpectrumDtos`).
+- `app/` – aplikacja GUI korzystająca z obu bibliotek.
+- `EnergySpectra.pro` – projekt nadrzędny (qmake, TEMPLATE=subdirs).
 
 ## Format danych wejściowych
 ```
@@ -39,9 +41,10 @@ Prosta aplikacja desktopowa Qt (Qt Charts) do wczytywania plików z energiami, b
 4) Dodawaj kolejne pliki, aby porównywać widma.  
 5) Usuń zaznaczony wiersz przyciskiem `Remove` – seria znika, numeracja w tabeli aktualizuje się.  
 6) Zoom: kółko myszy (nad osią – zoom tylko tej osi; nad wykresem – zoom obu). Pan: przytrzymaj lewy/środkowy przycisk i przeciągnij.
+7) Eksport danych lub obrazu: przyciski pod wykresem; domyślne nazwy plików zawierają timestamp.
 
 ## Budowanie i uruchamianie
-Wymagania: Qt 6 (z modułem Qt Charts) lub Qt 5.15 z odpowiednim add-onem.
+Wymagania: Qt 6 (z modułem Qt Charts) lub Qt 5.15 z odpowiednim add-onem. Projekt korzysta z dwóch bibliotek statycznych (`chartlib`, `spectrumlib`).
 
 ### qmake
 ```
@@ -57,6 +60,6 @@ make    # na Windows: nmake / jom
 
 ## Pomysły na rozwój
 - Dodać kontrolkę UI do ustawiania `binWidth`.  
-- Eksport wykresu (PNG/CSV).  
+- Eksport danych w CSV z wyborem separatora i zakresu osi.  
 - Przełącznik trybu normalizacji (per event / per wpis).  
 - Podgląd liczby zer w tooltipie serii lub w stopce wykresu.
