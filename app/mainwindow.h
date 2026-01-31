@@ -5,11 +5,9 @@
 #include <QCheckBox>
 #include <QMap>
 #include <QThread>
-#include <QtCharts/QChartView>
-#include <QtCharts/QChart>
 #include <QtCharts/QLineSeries>
-#include "SpectrumService.h"
-#include "zoomablechartview.h"
+#include "spectrumservice.h"
+#include "spectrumchart.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -37,8 +35,7 @@ private:
     Ui::MainWindow *ui;
     SpectrumService* m_service = nullptr;
     QThread* m_serviceThread = nullptr;
-    QChart* m_chart = nullptr;
-    ZoomableChartView* m_chartView = nullptr;
+    SpectrumChartWidget* m_chartWidget = nullptr;
     QMap<int, QLineSeries*> m_seriesByRow;
 };
 #endif // MAINWINDOW_H

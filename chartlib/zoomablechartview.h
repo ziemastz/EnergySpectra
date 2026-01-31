@@ -24,7 +24,6 @@ private:
     QPoint m_lastMousePos;
     bool m_isPanning = false;
     
-    // Pomocnicze metody do zoom selektywnego
     QValueAxis* getAxisAtPosition(const QPoint& pos, Qt::Orientation& axis);
 };
 

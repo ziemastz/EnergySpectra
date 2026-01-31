@@ -9,10 +9,7 @@
 #include <QStatusBar>
 #include <QThread>
 #include <QMetaType>
-#include <QtCharts/QLineSeries>
-#include <QtCharts/QValueAxis>
 #include <QVBoxLayout>
-#include <QPainter>
 #include <QTableWidgetItem>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -31,27 +28,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_service, &SpectrumService::spectrumError, this, &MainWindow::onSpectrumError);
     m_serviceThread->start();
 
-    m_chart = new QChart();
-    m_chart->setTitle("Energy spectrum");
-    m_chart->legend()->setVisible(true);
-
-    auto* axisX = new QValueAxis();
-    axisX->setTitleText("Energy");
-    axisX->setLabelsVisible(true);
-    
-    auto* axisY = new QValueAxis();
-    axisY->setTitleText("Normalized Counts");
-    axisY->setLabelsVisible(true);
-
-    m_chart->addAxis(axisX, Qt::AlignBottom);
-    m_chart->addAxis(axisY, Qt::AlignLeft);
-
-    m_chartView = new ZoomableChartView(m_chart, ui->chart_widget);
-    m_chartView->setRenderHint(QPainter::Antialiasing);
+    m_chartWidget = new SpectrumChartWidget(ui->chart_widget);
 
     auto* layout = new QVBoxLayout(ui->chart_widget);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(m_chartView);
+    layout->addWidget(m_chartWidget);
 }
 
 MainWindow::~MainWindow()
@@ -93,37 +74,13 @@ void MainWindow::on_add_pushButton_clicked()
 
 void MainWindow::onSpectrumReady(const SpectrumResult& result)
 {
-    auto* series = new QLineSeries();
-    series->setName(result.label);
-
-    for (const auto& p : result.points)
-        series->append(p);
-
-    m_chart->addSeries(series);
-
-    // Podepnij osie (zakładamy, że już istnieją)
-    auto* axisX = qobject_cast<QValueAxis*>(m_chart->axes(Qt::Horizontal).first());
-    auto* axisY = qobject_cast<QValueAxis*>(m_chart->axes(Qt::Vertical).first());
-    
-    if (axisX && axisY) {
-        series->attachAxis(axisX);
-        series->attachAxis(axisY);
-        
-        // Ustaw zakresy osi na podstawie danych
-        double minX = result.stats.minE;
-        double maxX = result.stats.maxE;
-        double padding = (maxX - minX) * 0.1;  // 10% paddingu
-        
-        axisX->setRange(minX - padding, maxX + padding);
-        
-        // Dla osi Y, znajdź maksymalną liczbę zliczonych energii
-        double maxY = 0;
-        for (const auto& point : result.points) {
-            if (point.y() > maxY) {
-                maxY = point.y();
-            }
-        }
-        axisY->setRange(0, maxY * 1.1);  // 10% buforu na górze
+    auto* series = m_chartWidget->addSeries(result.label, result.points);
+    if (!series) {
+        QApplication::restoreOverrideCursor();
+        ui->add_pushButton->setEnabled(true);
+        if (ui->statusbar) ui->statusbar->clearMessage();
+        QMessageBox::warning(this, tr("Chart error"), tr("Failed to create series for %1").arg(result.label));
+        return;
     }
 
     // Dodaj wiersz do tabeli
@@ -218,8 +175,7 @@ void MainWindow::on_remove_pushButton_clicked()
     // Usuń serię z wykresu
     if (m_seriesByRow.contains(selectedRow)) {
         QLineSeries* series = m_seriesByRow[selectedRow];
-        m_chart->removeSeries(series);
-        delete series;
+        m_chartWidget->removeSeries(series);
         m_seriesByRow.remove(selectedRow);
     }
 
